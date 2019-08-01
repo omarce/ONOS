@@ -1,0 +1,177 @@
+SREST Driver README
+*******************
+
+0- Srest driver for ONOS
+========================
+
+Srest driver is a "simple REST" (srest) driver that allows ONOS to communicates with a simple REST(HTTP) server on the devices.
+
+Convention:
+Line starting with $ is a command
+Term between angle brackets <..> is a variable 
+
+1- How to use it
+================
+
+a. Run ONOS
+-----------
+
+$ bazel run onos-local
+Note that ff behind a proxy and if you built it with proxy, you need to add same proxy options than used for building.
+I.e. :
+$ bazel run onos-local action_env=HTTP_PROXY=$http_proxy --action_env=HTTPS_PROXY=$http_proxy
+(assuming than environment variable http_proxy contains proxy URL)
+
+
+b. Activate functionality
+-------------------------
+
+$ <ONOS_dir>/tools/package/bin/onos "app activate org.onosproject.drivers.srest"
+In order to discover the links between devices, you need to activate linkdiscovery application as well :
+$ <ONOS_dir>/tools/package/bin/onos "app activate org.onosproject.linkdiscovery"
+
+c. Install and launch the REST server on devices
+------------------------------------------------
+
+(prerequesite : python3)
+Assume that IP@ of the device is <device_P> and port used to communicate with ONOS is <device_port>
+Install restserver.py on your device 
+Create files into directory where restserver will be launched (<restserver_dir>) :
+- DeviceDescription.json
+- PortsDescription.json
+- Links.json
+
+IMPORTANT : See below for content of these files.
+Launch restserver.py :
+$ cd <restserver_dir>; python3 restserver.py <device_port> <device_IP>
+
+d. Create a JSON file with devices info and send it to ONOS
+-----------------------------------------------------------
+
+Example :
+--
+{
+  "devices": {
+    "rest:<device_IP>:<device_port>": {
+      "rest": {
+        "ip": "<device_IP>",
+        "port": <device_port>,
+        "protocol": "http"
+      },
+	"basic" : {
+	    "driver" : "srest"
+	}
+	
+    }
+}
+--
+Store it to <cfg_file>
+
+Assume that ONOS is reachable at addresse <ONOS_IP>
+
+Send it to ONOS with :
+$ <ONOS_dir>/tools/package/runtime/bin/onos-netcfg <ONOS_IP>  <cfg_file>
+
+You should see in the GUI or through ONOS commands the devices, ports and links.
+
+Et voilà !
+
+2- JSON file content on devices
+==============================
+
+The simple REST server will send content of JSON files on request.
+
+a. DeviceDescription.json
+-------------------------
+
+It contains information about devices. If not provided, the field will be set to "Unknown"
+Example :
+--
+{
+    "manufacturer" : "Bell Labs",
+    "hw_version" : "1.0",
+    "sw_version" : "1.0",
+    "serial_number" : "123456789"
+}
+--
+
+b. PortsDescription.json
+------------------------
+
+Contain the list of ports of the device
+Example :
+--
+[
+    { "port_number" : "1" },
+    { "port_number" : "2" }
+]
+--
+
+c. Links.json
+-------------
+
+Contains the links between the devices
+Example:
+--
+[
+    { "src" : "rest:192.168.80.2:8001/1",
+      "dst" : "rest:192.168.80.1:8001/1"},
+    { "src" : "rest:192.168.80.1:8001/1",
+      "dst" : "rest:192.168.80.2:8001/1"}
+]
+--
+
+3- Useful tips
+==============
+
+To clean the server: 
+$ bazel clean 
+
+To delete all compiled files and packages: 
+$ bazel clean–expunge
+
+To delete all  from onos: 
+$ <ONOS_dir>/tools/package/bin/onos "onos:wipe-out please"
+
+
+4- Architecture and how to develop a driver
+===========================================
+Assume that the name of the driver is <driver_name> (sometimes written <Driver_name> when an upper case is needed. For example, we will use "srest" (for simple REST) and "Srest"
+
+a. Create hierarchy
+-------------------
+
+Create a directory <driver_name> into onos/drivers with its subdirectories with following command :
+$ mkdir -p <ONOS_dir>/drivers/<driver_name>/src/main/resources <ONOS_dir>/drivers/<driver_name>/src/main/java/org/onosproject/drivers/<driver_name>
+
+b. Prepare BUILD file
+---------------------
+
+Copy  BUILD file from <ONOS_dir>/drivers/srest  in <ONOS_dir>/drivers/<driver_name> directory. Customize it (see below). 
+Be sure to update onos_app information (warning: do not left URL field empty, this will crash application building with an non understandable error message… any non empty string is ok). 
+app_name is "org.onosproject.drivers.<driver_name>", as we are based on REST,we require rest dependencies (XX)
+
+c. Describe behaviours
+----------------------
+
+Create a file <driver_name>-drivers.xml in resources dir.
+This files describe the behaviour that the driver will support (zero behaviour is ok)
+
+To let the devices registered in the devices list, you need to support org.onosproject.net.device.DeviceDescriptionDiscovery :
+   
+    <behaviour api="org.onosproject.net.device.DeviceDescriptionDiscovery"
+                   impl="org.onosproject.drivers.<driver_name>.<java_class>"/>
+		 
+where <java_class> is the implementation of DeviceDescriptionDiscovery interface.
+
+To have the links in the topology :
+        <behaviour api="org.onosproject.net.behaviour.LinkDiscovery"
+                   impl="org.onosproject.drivers.<driver_name>.<java_class>"/>
+
+d. Prepare loader
+-----------------
+Copy SrestDriversLoader.java  into <driver_name> dir with name <Driver_name>DriversLoader.java and update super() line with "/<driver_name>-drivers.xml"
+
+e. Implement functionality
+--------------------------
+Create the java files that implements the behaviour declared in <driver_name>-drivers.xml with name as referenceed into xml file (i.e. impl= ‘….foo’, then create foo.java)
