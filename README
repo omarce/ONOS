@@ -4,7 +4,7 @@ SREST Driver README
 0- Introduction
 ========================
 
-Srest driver is a "simple REST" (srest) driver that allows ONOS to communicates with a simple REST(HTTP) server on the devices. It implements only the minimun set of functions needed, some necessary for a correct usage being not implemented (i.e. deactivate) as well as checks. This is given for experimentation and documentation only, to be used as skeleton and completed. 
+Srest driver is a "simple REST" (srest) driver that allows ONOS to communicates with a simple REST(HTTP) server on the devices. It implements only the minimun set of functions needed; some necessary for a correct usage being not implemented (i.e. deactivate) as well as checks. This is given for experimentation and documentation only, to be used as skeleton and completed. 
 
 Conventions:
 ------------
@@ -19,7 +19,7 @@ a. Run ONOS
 -----------
 
 $ bazel run onos-local
-Note that ff behind a proxy and if you built it with proxy, you need to add same proxy options than used for building.
+Note that if behind a proxy and if you built it with proxy, you need to add same proxy options than used for building.
 I.e. :
 $ bazel run onos-local action_env=HTTP_PROXY=$http_proxy --action_env=HTTPS_PROXY=$http_proxy
 (assuming than environment variable http_proxy contains proxy URL)
@@ -35,16 +35,16 @@ $ <ONOS_dir>/tools/package/bin/onos "app activate org.onosproject.linkdiscovery"
 c. Install and launch the REST server on devices
 ------------------------------------------------
 
-Assume that IP@ of the device is <device_P> and port used to communicate with ONOS is <device_port>
+Assume that @IP of the device is <device_IP> and port used to communicate with ONOS is <device_port>
 Install srestserver.py on your device 
-Create files into directory where restserver will be launched (<restserver_dir>) :
+Create files into directory where restserver will be launched (<srestserver_dir>) :
 - DeviceDescription.json
 - PortsDescription.json
 - Links.json
 
 IMPORTANT : See below for content of these files.
 Launch srestserver.py :
-$ cd <restserver_dir>; python srestserver.py <device_port> <device_IP>
+$ cd <srestserver_dir>; python srestserver.py <device_port> <device_IP>
 
 d. Create a JSON file with devices info and send it to ONOS
 -----------------------------------------------------------
@@ -73,7 +73,7 @@ Assume that ONOS is reachable at addresse <ONOS@> (localhost is ok if ONOS runs 
 Send it to ONOS with :
 $ <ONOS_dir>/tools/package/runtime/bin/onos-netcfg <ONOS@>  <cfg_file>
 
-You should see in the GUI or through ONOS commands the devices, ports and links.
+You should see in the GUI or through ONOS commands the devices, ports and links as defined in <cfg_file>.
 
 Et voilà !
 
@@ -157,9 +157,9 @@ c. Describe behaviours
 ----------------------
 
 Create a file <driver_name>-drivers.xml in resources dir.
-This files describe the behaviour that the driver will support (zero behaviour is ok)
+This file describes the behaviours that the driver will support (zero behaviour is ok)
 
-To let the devices registered in the devices list, you need to support org.onosproject.net.device.DeviceDescriptionDiscovery :
+To get the devices registered in the devices list, you need to support org.onosproject.net.device.DeviceDescriptionDiscovery :
    
     <behaviour api="org.onosproject.net.device.DeviceDescriptionDiscovery"
                    impl="org.onosproject.drivers.<driver_name>.<java_class>"/>
@@ -172,11 +172,11 @@ To have the links in the topology :
 
 d. Prepare loader
 -----------------
-Copy SrestDriversLoader.java  into <driver_name> dir with name <Driver_name>DriversLoader.java and update super() line with "/<driver_name>-drivers.xml"
+Copy SrestDriversLoader.java  into <ONOS_dir>/drivers/<driver_name>/src/main/java/org/onosproject/drivers/<driver_name>  dir with name <Driver_name>DriversLoader.java and update super() line with "/<driver_name>-drivers.xml"
 
 e. Implement functionality
 --------------------------
-Create the java files that implements the behaviour declared in <driver_name>-drivers.xml with name as referenceed into xml file (i.e. impl= ‘….foo’, then create foo.java)
+Create the java files that implements the behaviour declared in <driver_name>-drivers.xml with name as referenceed into xml file (i.e. impl= ‘….foo’, then create foo.java). You can borrow code from srest java files.
 
 
 5- How to handle a configuration pushed with NetworkConfigurationService[1]
@@ -185,15 +185,15 @@ Create the java files that implements the behaviour declared in <driver_name>-dr
 a. Registering config class
 ---------------------------
 
-In order to be notified when a configuration is pushed into ONOS through NetworkConfigurationService, you need to register with the NetworkConfigRegistry, indicating :
-- with subject (i.e. devices, ports, hosts, etc.) is concerned by the configuration,
+In order to handle a configuration pushed into ONOS through NetworkConfigurationService, you need to register with the NetworkConfigRegistry, indicating :
+- which subject (i.e. devices, ports, hosts, etc.) is concerned by the configuration,
 - what is the key that identifies the configuration to be managed (i.e. basic, etc.),
-- what is the class of the subject
+- what is the class of the subject,
 - and last what is the class of the config object that will deal with the config.
 
-In srest, this is done in SrestDriversLoaders.java, in activate method, by registering a Factory that will create a SrestDeviceConfig object when needed. This is registered with the config key "srest" (from SrestDeviceConfig.java) for subject "devices". That means that the JSON sub-tree identified by "srest" will be applied to identified device in the json  file by the SrestDeviceConfig object.
+In srest, this is done in SrestDriversLoaders.java, in activate method, by registering a factory that will create a SrestDeviceConfig object when needed. This is registered with the config key "srest" (from SrestDeviceConfig.java) for subject "devices". That means that the JSON sub-tree identified by "srest" will be applied to identified device in the json  file by the SrestDeviceConfig object.
 
-For example, we can pushed such configuration by the following command :
+For example, we can push such configuration by the following command :
 $ tools/package/runtime/bin/onos-netcfg <ONOS@> <config.json> 'devices/<device_id>/srest'
 where config.json is :
 --
@@ -203,9 +203,9 @@ where config.json is :
 b. Registering a NetworkEvent listener
 --------------------------------------
 
-(Note that the following is maybe not the canonical way to do, but the only one I found at this stage. If other methods is available or recommended, please let me know).
+(Note that the following is maybe not the canonical way to do, but the only one I found at this stage. If other methods are available or recommended, please let me know).
 
-In order to be notified each time that a configuration for "srest" key is provided to ONOS, we must register an event listener, as done in SrestDriversLoaders. The listener checks which event is fired. If CONFIG_ADDED or CONFIG_UPDATED it runs a thread with addOrUpdate method from config object (i.e. SrestDeviceConfig in our case).
+In order to be notified each time that a configuration for "srest" key is provided to ONOS, we must register an event listener, as done in SrestDriversLoaders. The listener checks which event is fired. If this is CONFIG_ADDED or CONFIG_UPDATED it runs a thread with addOrUpdate method from config object (i.e. SrestDeviceConfig in our case).
 In this method, we get access to the (REST) controller of the driver through the DefaultServiceDirectory.getService(<Class>) static method. It is then used to perform a POST HTTP request to the device, posting the JSON sub-tree corresponding to the "srest" key. 
 The HTTP/REST server on the device side receives the JSON data. It is up to you to use it as needed. 
 
