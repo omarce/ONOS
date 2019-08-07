@@ -47,6 +47,7 @@ import java.util.Optional;
 import java.util.ListIterator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -66,7 +67,7 @@ import org.onosproject.net.ConnectPoint;
 public class LinkDiscoverySrestImpl extends AbstractHandlerBehaviour implements LinkDiscovery {
 
     private final Logger log = getLogger(getClass());
-
+    private final String LATENCY_KEY="latency";
     @Override
     public Set<LinkDescription> getLinks() {
 
@@ -85,13 +86,32 @@ public class LinkDiscoverySrestImpl extends AbstractHandlerBehaviour implements 
 	try{
 	    p=mapper.readValue(is,new TypeReference<List<HashMap<String,String>>>() {});
 	    ListIterator li=p.listIterator();
-	
+	    DefaultAnnotations.Builder b;
+	    Set<String> keys;
+	    Iterator<String> ik;
+	    String k;
+	    src=dst=null;
 	    while( li.hasNext() ){
+		b=DefaultAnnotations.builder();
 		map=(HashMap<String,String>)li.next();
-		src=ConnectPoint.deviceConnectPoint(map.get("src"));
-		dst=ConnectPoint.deviceConnectPoint(map.get("dst"));
-		ld=new DefaultLinkDescription(src,dst,Link.Type.DIRECT);
-		links.add(ld);
+		keys=map.keySet();
+		ik=keys.iterator();
+		while(ik.hasNext() ){
+		    k=(String)ik.next();
+		    if( k=="src" ){
+			src=ConnectPoint.deviceConnectPoint(map.get("src"));
+		    }
+		    else if( k=="dst" ){			   
+			dst=ConnectPoint.deviceConnectPoint(map.get("dst"));
+		    }
+		    else{
+			b.set(k,map.get(k));
+		    }
+		}
+		if( dst!=null && src!=null ){
+		    ld=new DefaultLinkDescription(src,dst,Link.Type.DIRECT, b.build());
+		    links.add(ld);
+		}
 	    }
 	} catch (Exception e) {
             log.error("Exception occurred because of {}, trace: {}", e, e.getStackTrace());

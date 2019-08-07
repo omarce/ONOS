@@ -24,6 +24,15 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
         data = {}
       self.send_response(200)
       self.end_headers()
+    elif None != re.search('/SetConfig', self.path):
+      ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
+      if ctype == 'application/json':
+        length = int(self.headers.getheader('content-length'))
+        data = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+        print data
+        self.send_response(200)
+        self.end_headers()
+        
     else:
       self.send_response(403)
       self.send_header('Content-Type', 'application/json')
