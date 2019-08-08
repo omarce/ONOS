@@ -15,8 +15,20 @@ Files content are enclosed between (line_start)--
 1- How to use it
 ================
 
-a. Run ONOS
+a. Add srest module in ONOS module list
+----------------------------------------
+
+Add :
+    "//drivers/srest:onos-drivers-srest-oar",
+into
+	ONOS_DRIVERS = [
+section of file <ONOS_dirQ>/tools/build/bazel/modules.bzl
+
+
+b. Run ONOS
 -----------
+
+Bazel run command will rebuild ONOS if needed
 
 $ bazel run onos-local
 Note that if behind a proxy and if you built it with proxy, you need to add same proxy options than used for building.
@@ -25,14 +37,14 @@ $ bazel run onos-local action_env=HTTP_PROXY=$http_proxy --action_env=HTTPS_PROX
 (assuming than environment variable http_proxy contains proxy URL)
 
 
-b. Activate functionality
+c. Activate functionality
 -------------------------
 
 $ <ONOS_dir>/tools/package/bin/onos "app activate org.onosproject.drivers.srest"
 In order to discover the links between devices, you need to activate linkdiscovery application as well :
 $ <ONOS_dir>/tools/package/bin/onos "app activate org.onosproject.linkdiscovery"
 
-c. Install and launch the REST server on devices
+d. Install and launch the REST server on devices
 ------------------------------------------------
 
 Assume that @IP of the device is <device_IP> and port used to communicate with ONOS is <device_port>
@@ -46,7 +58,7 @@ IMPORTANT : See below for content of these files.
 Launch srestserver.py :
 $ cd <srestserver_dir>; python srestserver.py <device_port> <device_IP>
 
-d. Create a JSON file with devices info and send it to ONOS
+e. Create a JSON file with devices info and send it to ONOS
 -----------------------------------------------------------
 
 Example :
