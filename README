@@ -22,7 +22,7 @@ Add :
     "//drivers/srest:onos-drivers-srest-oar",
 into
 	ONOS_DRIVERS = [
-section of file <ONOS_dirQ>/tools/build/bazel/modules.bzl
+section of file <ONOS_dir>/tools/build/bazel/modules.bzl
 
 
 b. Run ONOS
